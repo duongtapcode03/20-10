@@ -1,19 +1,69 @@
 // Love explosion effect
+let isAnimating = false; // Flag to prevent multiple animations
+let animationTimeouts = []; // Store timeout IDs for cleanup
+
 function showLove() {
+  // Prevent multiple animations
+  if (isAnimating) {
+    return;
+  }
+
+  // Clear any existing timeouts
+  animationTimeouts.forEach((timeout) => clearTimeout(timeout));
+  animationTimeouts = [];
+
+  isAnimating = true;
+
   const explosion = document.getElementById("loveExplosion");
   const specialRose = document.getElementById("specialRoseEffect");
+  const heartBeat = document.getElementById("heartBeatEffect");
 
   explosion.innerHTML = "";
   specialRose.innerHTML = "";
+  heartBeat.innerHTML = "";
 
-  // Create special rose effect
-  const roseImg = document.createElement("img");
-  roseImg.src = "public/bohoahong.png";
-  roseImg.alt = "Bông hoa hồng đặc biệt";
-  specialRose.appendChild(roseImg);
+  // Check if mobile device
+  const isMobile = window.innerWidth <= 768;
 
-  // Activate special rose effect
-  specialRose.classList.add("active");
+  if (isMobile) {
+    // Mobile: Show only rose image with "hẹ hẹ" text
+    const roseImg = document.createElement("img");
+    roseImg.src = "public/bohoahong.png";
+    roseImg.alt = "Bó hoa hồng đặc biệt";
+    roseImg.className = "mobile-rose-effect";
+    specialRose.appendChild(roseImg);
+
+    // Add "hẹ hẹ" text below image
+    const heheText = document.createElement("div");
+    heheText.className = "hehe-text";
+    heheText.textContent = "hi hi :3";
+    specialRose.appendChild(heheText);
+
+    // Activate special rose effect
+    specialRose.classList.add("active", "mobile-effect");
+  } else {
+    // Desktop: Show heart particles effect
+    const heartParticles = document.createElement("div");
+    heartParticles.className = "heart-particles";
+    heartBeat.appendChild(heartParticles);
+
+    // Wait for next frame to ensure container is rendered
+    requestAnimationFrame(() => {
+      createHeartParticles(heartParticles);
+    });
+
+    // Activate heart beat effect
+    heartBeat.classList.add("active");
+
+    // Create special rose effect
+    const roseImg = document.createElement("img");
+    roseImg.src = "public/bohoahong.png";
+    roseImg.alt = "Bó hoa hồng đặc biệt";
+    specialRose.appendChild(roseImg);
+
+    // Activate special rose effect
+    specialRose.classList.add("active");
+  }
 
   // Create multiple hearts for explosion (smaller effect)
   for (let i = 0; i < 15; i++) {
@@ -32,15 +82,57 @@ function showLove() {
   explosion.classList.add("active");
 
   // Remove the effects after animation
-  setTimeout(() => {
+  const timeout1 = setTimeout(() => {
     explosion.classList.remove("active");
     explosion.innerHTML = "";
   }, 1000);
+  animationTimeouts.push(timeout1);
 
-  setTimeout(() => {
+  const timeout2 = setTimeout(() => {
     specialRose.classList.remove("active");
     specialRose.innerHTML = "";
-  }, 3000);
+    isAnimating = false; // Reset flag after animation completes
+  }, 5000);
+  animationTimeouts.push(timeout2);
+
+  // Only add heart timeout for desktop
+  if (!isMobile) {
+    const timeout3 = setTimeout(() => {
+      heartBeat.classList.remove("active");
+      heartBeat.innerHTML = "";
+    }, 4000);
+    animationTimeouts.push(timeout3);
+  }
+}
+
+// Function to cleanup all animations
+function cleanupAnimations() {
+  // Clear all timeouts
+  animationTimeouts.forEach((timeout) => clearTimeout(timeout));
+  animationTimeouts = [];
+
+  // Reset flag
+  isAnimating = false;
+
+  // Clear all containers
+  const explosion = document.getElementById("loveExplosion");
+  const specialRose = document.getElementById("specialRoseEffect");
+  const heartBeat = document.getElementById("heartBeatEffect");
+
+  if (explosion) {
+    explosion.classList.remove("active");
+    explosion.innerHTML = "";
+  }
+
+  if (specialRose) {
+    specialRose.classList.remove("active");
+    specialRose.innerHTML = "";
+  }
+
+  if (heartBeat) {
+    heartBeat.classList.remove("active");
+    heartBeat.innerHTML = "";
+  }
 }
 
 // Add CSS for heart explosion animation
@@ -575,3 +667,164 @@ document.head.appendChild(randomFloatStyle);
 
 // Create random floating images every 3 seconds
 setInterval(createRandomFloatingImage, 3000);
+
+// Cleanup animations when page is unloaded
+window.addEventListener("beforeunload", cleanupAnimations);
+
+// Function to create heart shape with particles
+function createHeartParticles(container) {
+  try {
+    const particles = [];
+    const particleCount = 1000; // Increased for more particles
+
+    // Get container dimensions (fallback to CSS values if not rendered yet)
+    const containerWidth = container.offsetWidth || 300; // fallback to 300px
+    const containerHeight = container.offsetHeight || 300; // fallback to 300px
+    const centerX = containerWidth / 2;
+    const centerY = containerHeight / 2;
+
+    // Calculate scale based on container size
+    const scale = Math.min(containerWidth, containerHeight) / 100;
+
+    // Heart shape mathematical formula
+    function getHeartPoint(t) {
+      const x = 16 * Math.pow(Math.sin(t), 3);
+      const y = -(
+        13 * Math.cos(t) -
+        5 * Math.cos(2 * t) -
+        2 * Math.cos(3 * t) -
+        Math.cos(4 * t)
+      );
+      return { x: x * scale, y: y * scale };
+    }
+
+    // Create particles along heart shape with spacing
+    for (let i = 0; i < particleCount; i++) {
+      const t = (i / particleCount) * 2 * Math.PI;
+      const point = getHeartPoint(t);
+
+      const particle = document.createElement("div");
+      particle.className = "heart-particle";
+
+      // Add random offset to prevent particles from sticking together
+      const offsetX = (Math.random() - 0.5) * scale * 2;
+      const offsetY = (Math.random() - 0.5) * scale * 2;
+
+      // Position particles (centered in responsive container)
+      particle.style.left = centerX + point.x + offsetX + "px";
+      particle.style.top = centerY + point.y + offsetY + "px";
+
+      // Random delay for animation
+      particle.style.animationDelay = Math.random() * 0.5 + "s";
+
+      // Smaller size variation to reduce overlap
+      const size = 2 + Math.random() * 2;
+      particle.style.width = size + "px";
+      particle.style.height = size + "px";
+
+      // Random color variation
+      const hue = 340 + Math.random() * 20; // Pink to red range
+      particle.style.background = `hsl(${hue}, 100%, 60%)`;
+      particle.style.boxShadow = `0 0 ${
+        3 + Math.random() * 2
+      }px hsl(${hue}, 100%, 60%)`;
+
+      container.appendChild(particle);
+      particles.push(particle);
+    }
+
+    // Add fewer particles inside the heart shape (dispersed from border)
+    for (let i = 0; i < 50; i++) {
+      const particle = document.createElement("div");
+      particle.className = "heart-particle";
+
+      // Generate random points inside heart shape with spacing
+      let x, y;
+      let attempts = 0;
+      do {
+        x = (Math.random() - 0.5) * scale * 35;
+        y = (Math.random() - 0.5) * scale * 35;
+        attempts++;
+      } while (!isInsideHeart(x, y, scale) && attempts < 50);
+
+      // Add small random offset to prevent clustering
+      const offsetX = (Math.random() - 0.5) * scale * 1.5;
+      const offsetY = (Math.random() - 0.5) * scale * 1.5;
+
+      particle.style.left = centerX + x + offsetX + "px";
+      particle.style.top = centerY + y + offsetY + "px";
+      particle.style.animationDelay = Math.random() * 0.8 + "s";
+
+      const size = 1.5 + Math.random() * 1.5;
+      particle.style.width = size + "px";
+      particle.style.height = size + "px";
+
+      const hue = 340 + Math.random() * 20;
+      particle.style.background = `hsl(${hue}, 100%, 60%)`;
+      particle.style.boxShadow = `0 0 ${
+        2 + Math.random() * 2
+      }px hsl(${hue}, 100%, 60%)`;
+
+      container.appendChild(particle);
+    }
+
+    // Add dispersed particles around the heart (radiating from border)
+    for (let i = 0; i < 200; i++) {
+      const particle = document.createElement("div");
+      particle.className = "heart-particle";
+
+      // Random position around heart (centered in responsive container)
+      const angle = Math.random() * 2 * Math.PI;
+      const radius = scale * 20 + Math.random() * (scale * 30);
+      const x = centerX + Math.cos(angle) * radius;
+      const y = centerY + Math.sin(angle) * radius;
+
+      particle.style.left = x + "px";
+      particle.style.top = y + "px";
+      particle.style.animationDelay = Math.random() * 0.8 + "s";
+
+      const size = 2 + Math.random() * 2;
+      particle.style.width = size + "px";
+      particle.style.height = size + "px";
+
+      const hue = 340 + Math.random() * 20;
+      particle.style.background = `hsl(${hue}, 100%, 60%)`;
+      particle.style.boxShadow = `0 0 ${
+        3 + Math.random() * 3
+      }px hsl(${hue}, 100%, 60%)`;
+
+      container.appendChild(particle);
+    }
+
+    // Helper function to check if point is inside heart
+    function isInsideHeart(x, y, scale) {
+      const t = Math.atan2(y, x);
+      const heartX = 16 * Math.pow(Math.sin(t), 3) * scale;
+      const heartY =
+        -(
+          13 * Math.cos(t) -
+          5 * Math.cos(2 * t) -
+          2 * Math.cos(3 * t) -
+          Math.cos(4 * t)
+        ) * scale;
+
+      // Check if point is inside the heart boundary
+      const distance = Math.sqrt(x * x + y * y);
+      const heartDistance = Math.sqrt(heartX * heartX + heartY * heartY);
+
+      return distance <= heartDistance * 0.8; // 80% of heart size for inner particles
+    }
+  } catch (error) {
+    console.error("Error creating heart particles:", error);
+    // Fallback: create a simple heart shape
+    const fallbackHeart = document.createElement("div");
+    fallbackHeart.innerHTML = "💖";
+    fallbackHeart.style.fontSize = "100px";
+    fallbackHeart.style.color = "#ff1744";
+    fallbackHeart.style.position = "absolute";
+    fallbackHeart.style.left = "50%";
+    fallbackHeart.style.top = "50%";
+    fallbackHeart.style.transform = "translate(-50%, -50%)";
+    container.appendChild(fallbackHeart);
+  }
+}
